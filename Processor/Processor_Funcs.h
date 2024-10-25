@@ -1,0 +1,43 @@
+#ifndef SPU_FUNCS
+#define SPU_FUNCS
+
+#include "Processor_definitions.h"
+#include "Processor_debug.h"
+
+void SPU_Ctor(SPU_data * processor, const char* filename);
+void SPU_Run(SPU_data * processor);
+void Read_code_file(SPU_data * processor, const char* file_name);
+
+void SPU_Hlt(SPU_data * processor);
+
+void SPU_Push(SPU_data* processor);
+int64_t Get_push_arg(SPU_data* processor);
+
+void SPU_Pop(SPU_data* processor);
+void* Get_pop_arg(SPU_data* processor);
+
+void SPU_Add(SPU_data* processor);
+void SPU_Sub(SPU_data* processor);
+void SPU_Mul(SPU_data* processor);
+void SPU_Div(SPU_data* processor);
+
+void SPU_Out(SPU_data* processor);
+
+void SPU_Jb(SPU_data* processor);
+
+void SPU_Dtor(SPU_data* processor);
+
+#define COMMANDS_DEF(name, cmd, arg_n, func) name, cmd, arg_n, func
+const unsigned int Command_len = 8;
+
+struct Commands_data_struct {
+
+    char command_name[Command_len];
+    int command_num;
+    int args_amount;
+    void (*SPU_Func) (SPU_data * processor);
+
+};
+
+void Printf_Format_Function(const void * value);
+#endif
