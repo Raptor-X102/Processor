@@ -3,60 +3,55 @@
 void SPU_Dump(const SPU_data * processor, void (* Printf_Format_Func)(const void * value)) {
 
     int scale = 8;
-    printf("-----------------------------------------------------------------------------------------\n");
+    fprintf(stderr, "-----------------------------------------------------------------------------------------\n");
 
-    printf("code:  ");
+    fprintf(stderr, "code:  ");
     for(int commands_amount = 0; commands_amount < processor->code_size; commands_amount += scale) {
         if(commands_amount >= scale)
-            printf("\n       ");
+            fprintf(stderr, "\n       ");
         for(int i = commands_amount; i < commands_amount + scale && i < processor->code_size; i++)
-            printf("%8X ", i);
-        printf("\n");
-        printf("       ");
+            fprintf(stderr, "%8X ", i);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "       ");
         for(int i = commands_amount; i < commands_amount + scale && i < processor->code_size; i++) {
 
-            printf("%8X ", processor->cmd_code[i]);
+            fprintf(stderr, "%8X ", processor->cmd_code[i]);
         }
-        printf("\n");
+        fprintf(stderr, "\n");
         if(processor->IP >= commands_amount && processor->IP < commands_amount + scale) {
-            printf("              ");
+            fprintf(stderr, "              ");
             for(int k = commands_amount; k < processor->IP; k++) {
 
-                printf("         ");
+                fprintf(stderr, "         ");
             }
 
-            printf("^ IP = %2llX\n", processor->IP);
-
+            fprintf(stderr, "^ IP = %2llX\n", processor->IP);
         }
-
-
     }
 
-
-
-
-
-
-
-    printf("Stack: ");
+    fprintf(stderr, "Stack: ");
 
     for(size_t commands_amount = 0; commands_amount < processor->stack.size; commands_amount++) {
 
         Printf_Format_Func((char*)processor->stack.data+commands_amount*processor->stack.element_size);
     }
 
-    printf("\nRegisters: ");
+    fprintf(stderr, "\nRegisters: ");
+
     for(int commands_amount = 0; commands_amount < Registers_amount; commands_amount++)
-        printf("%.2lg ", processor->registers[commands_amount]);
-    printf("\nRAM: \n");
+        fprintf(stderr, "%.2lg ", processor->registers[commands_amount]);
+
+    fprintf(stderr, "\nRAM: \n");
+
     int scale_ram = 20;
-    /*for(int i = 0; processor->RAM[i] != 0; i++)
-        printf("%4.2lg ", processor->RAM[i]); */
+
     for(int i = 0; i < 400; i+=scale_ram) {
         for(int j = i; j < i + scale_ram; j++)
-            printf("%4.2lg ", processor->RAM[j]);
-        printf("\n");
+            fprintf(stderr, "%4.2lg ", processor->RAM[j]);
+
+        fprintf(stderr, "\n");
     }
-    printf("\n-----------------------------------------------------------------------------------------\n");
+
+    fprintf(stderr, "\n-----------------------------------------------------------------------------------------\n");
     getchar();
 }

@@ -48,8 +48,8 @@ struct Commands_data_struct {
     int command_num;
     int args_amount;
     void (*SPU_Func) (SPU_data * processor);
-
 };
 
 void Printf_Format_Function(const void * value);
+
 #endif

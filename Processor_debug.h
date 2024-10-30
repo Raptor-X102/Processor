@@ -8,6 +8,7 @@
 #else
 #define SPU_DUMP(processor, Printf_Format_Func)
 #endif
+
 void SPU_Dump(const SPU_data * processor, void (* Printf_Format_Func)(const void * value));
 
 #endif

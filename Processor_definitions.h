@@ -40,9 +40,9 @@ enum machine_code {
     CMD_KX = 0xB,
     CMD_LX = 0xC,
     CMD_MX = 0xD,
-    CMD_XX = 0xE,
-    CMD_YX = 0xF,
-    CMD_ZX = 0x10,
+    CMD_XX = 0x18,
+    CMD_YX = 0x19,
+    CMD_ZX = 0x1A,
 
     NUMBER_MASK = 0x1,
     REGISTER_MASK = 0x2,

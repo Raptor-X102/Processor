@@ -6,7 +6,7 @@ void Printf_Format_Function(const void * value) {
 
     double tmp = 0;
     memcpy(&tmp, value, sizeof(double));
-    printf("%.2lg ", tmp);
+    fprintf(stderr, "%.2lg ", tmp);
 }
 
 Commands_data_struct Commands_data[] =
@@ -25,7 +25,9 @@ void SPU_Ctor(SPU_data * processor, const char* filename) {
     STACK_CTOR(&(processor->stack), 10, sizeof(double), &poison);
     STACK_CTOR(&(processor->ret_val_stack), 10, sizeof(uint64_t), &poison);
     Read_code_file(processor, filename);
+
     double* tmp_ptr = (double*) calloc(RAM_Size, sizeof(double));
+
     if(tmp_ptr) {
 
         processor->RAM = tmp_ptr;
@@ -44,46 +46,51 @@ void SPU_Run(SPU_data * processor) { // TODO: rename (prefix)
 
         else
             Commands_data[processor->cmd_code[processor->IP]].SPU_Func(processor);
-            SPU_DUMP(processor, Printf_Format_Function);
 
+        SPU_DUMP(processor, Printf_Format_Function);
     }
 }
 
 void Read_code_file(SPU_data * processor, const char* file_name) {
 
     FILE * file = fopen(file_name, "rb");
+
     if(!file) {
 
         fprintf(stderr, "ERROR: file was not opened\n");
         return;
     }
+
     char signature[10] = {};
     int version = 0;
 
     fread(signature, sizeof(char), 5, file);
-    printf("%s\n", signature);
+    fprintf(stderr, "%s\n", signature);
 
     fread(&version, sizeof(int), 1, file);
-    printf("%d\n", version);
+    fprintf(stderr, "%d\n", version);
 
     fread(&(processor->code_size), sizeof(uint64_t), 1, file);
-    printf("(processor->code_size) = %d\n", (processor->code_size));
+    fprintf(stderr, "(processor->code_size) = %d\n", (processor->code_size));
     //getchar();
 
     if(processor->code_size) {
 
         char* tmp = (char*) calloc(processor->code_size+10, sizeof(char));
+
         if(tmp) {
 
             processor->cmd_code = tmp;
             tmp = NULL;
         }
+
         else {
 
             fprintf(stderr, "ERROR: memory was not allocated\n");
             return;
         }
     }
+
     else {
 
         fprintf(stderr, "ERROR: null size\n");
@@ -91,10 +98,11 @@ void Read_code_file(SPU_data * processor, const char* file_name) {
     }
 
     fread(processor->cmd_code, sizeof(char), processor->code_size, file);
-    printf("read_code_file\n");
+    fprintf(stderr, "read_code_file\n");
     for(int i = 0; i < processor->code_size; i++)
-        printf("%x ", processor->cmd_code[i]);
-    printf("\n");
+        fprintf(stderr, "%x ", processor->cmd_code[i]);
+
+    fprintf(stderr, "\n");
 }
 
 void SPU_Push(SPU_data* processor) {
@@ -167,6 +175,7 @@ void* Get_pop_arg(SPU_data* processor) {
     int option_byte = processor->cmd_code[processor->IP+1];
     processor->IP += 2;
     int64_t result = 0;
+
     if(option_byte & RAM_MASK) {
 
         if(option_byte & REGISTER_MASK) {
@@ -184,7 +193,6 @@ void* Get_pop_arg(SPU_data* processor) {
         }
 
         return &processor->RAM[result];
-
     }
 
     else {
@@ -194,129 +202,52 @@ void* Get_pop_arg(SPU_data* processor) {
     }
 }
 
-void SPU_Add(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    double sum = pop2 + pop1;
-    StackPush(&(processor->stack), &sum);
-
-    processor->IP++;
+#define DEF_FUNC(name, sign)\
+void SPU_##name(SPU_data* processor) {\
+    double pop1 = 0;\
+    double pop2 = 0;\
+\
+    StackPop(&(processor->stack), &pop1);\
+    StackPop(&(processor->stack), &pop2);\
+\
+    double result = pop2 sign pop1;\
+    StackPush(&(processor->stack), &result);\
+\
+   processor->IP++;\
+\
 }
 
-void SPU_Sub(SPU_data* processor) {
+#include "SPU_funcs_def_ariphm.h"
 
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    double difference = pop2 - pop1;
-    StackPush(&(processor->stack), &difference);
-
-    processor->IP++;
-}
-
-void SPU_Mul(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    double product = pop2 * pop1;
-    StackPush(&(processor->stack), &product);
-
-    processor->IP++;
-}
-
-void SPU_Div(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    double quotient = pop2 / pop1;
-    StackPush(&(processor->stack), &quotient);
-
-    processor->IP++;
-}
+#undef DEF_FUNC
 
 void SPU_Out(SPU_data* processor) {
 
     double out = 0;
     StackPop(&(processor->stack), &out);
-    printf("\nOUT: %lg\n\n", out);
+    fprintf(stderr, "\nOUT: %lg\n\n", out);
     processor->IP++;
 }
 
-void SPU_Ja(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    if(pop1 < pop2)
-        memcpy(&processor->IP, &processor->cmd_code[processor->IP+1], sizeof(uint64_t));
-
-    else
-        processor->IP += 1 + sizeof(uint64_t);
+#define DEF_JMP(type, sign) \
+void SPU_J##type(SPU_data* processor) {\
+\
+    double pop1 = 0;\
+    double pop2 = 0;\
+\
+    StackPop(&(processor->stack), &pop1);\
+    StackPop(&(processor->stack), &pop2);\
+\
+    if(pop1 sign pop2)\
+        memcpy(&processor->IP, &processor->cmd_code[processor->IP+1], sizeof(uint64_t));\
+\
+    else\
+        processor->IP += 1 + sizeof(uint64_t);\
 }
 
-void SPU_Jae(SPU_data* processor) {
+#include "SPU_funcs_def_jumps.h"
 
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    if(pop1 < pop2)
-        memcpy(&processor->IP, &processor->cmd_code[processor->IP+1], sizeof(uint64_t));
-
-    else
-        processor->IP += 1 + sizeof(uint64_t);
-}
-
-void SPU_Jb(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    if(pop1 > pop2)
-        memcpy(&processor->IP, &processor->cmd_code[processor->IP+1], sizeof(uint64_t));
-
-    else
-        processor->IP += 1 + sizeof(uint64_t);
-}
-
-void SPU_Jbe(SPU_data* processor) {
-
-    double pop1 = 0;
-    double pop2 = 0;
-
-    StackPop(&(processor->stack), &pop1);
-    StackPop(&(processor->stack), &pop2);
-
-    if(pop1 >= pop2)
-        memcpy(&processor->IP, &processor->cmd_code[processor->IP+1], sizeof(uint64_t));
-
-    else
-        processor->IP += 1 + sizeof(uint64_t);
-}
+#undef DEF_JMP
 
 void SPU_Je(SPU_data* processor) {
 
@@ -370,17 +301,20 @@ void SPU_Ret(SPU_data* processor) {
 void SPU_RAM_Draw(SPU_data* processor) {
 
     processor->IP++;
+
     uint64_t height = 0, width = 0;
+
     memcpy(&height, &processor->cmd_code[processor->IP], sizeof(uint64_t));
     processor->IP += sizeof(uint64_t);
+
     memcpy(&width, &processor->cmd_code[processor->IP], sizeof(uint64_t));
     processor->IP += sizeof(uint64_t);
 
     for(uint64_t y = 0; y < height*width; y += width) {
         for(uint64_t x = y; x < y + width; x++)
-            printf("%c", (char) processor->RAM[x]);
+            fprintf(stderr, "%c", (char) processor->RAM[x]);
 
-        printf("\n");
+        fprintf(stderr, "\n");
     }
 }
 void SPU_Dtor(SPU_data* processor) {
