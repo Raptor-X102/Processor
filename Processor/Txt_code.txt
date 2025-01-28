@@ -1,5 +1,6 @@
 RptrX
 2
+; int main() {
 PUSH 0
 POP AX
 NEXT:
@@ -14,4 +15,6 @@ POP AX
 PUSH AX
 PUSH 10
 JB NEXT:
-SPU_Hlt
+HLT
+; }
+
